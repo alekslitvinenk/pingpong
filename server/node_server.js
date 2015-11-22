@@ -1,9 +1,13 @@
 // Load the TCP Library
-net = require('net');
+var net = require('net');
 
 // Keep track of the chat clients
 var clients = [];
+
+// List of active game sessions
 var games = [];
+
+//List of unpaired clients
 var awaitingClients = [];
 
 // Start a TCP Server
