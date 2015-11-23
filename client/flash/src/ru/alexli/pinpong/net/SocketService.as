@@ -95,8 +95,12 @@ package ru.alexli.pinpong.net
 			
 			switch(message.cmd)
 			{
-				case "onlogin":
+				/*case "onlogin":
 					app.gmodel.playerInfo = message.playerinfo;
+					break;*/
+				
+				case "enemyfound":
+					app.gmodel.enemy = message.enemy;
 					break;
 				
 				case "gamestarted":
@@ -153,7 +157,8 @@ package ru.alexli.pinpong.net
 			
 			sendMessage({
 				cmd: "login",
-				player: app.gmodel.playerID
+				player: app.gmodel.playerID,
+				time: new Date().time
 			});
 		}
 		

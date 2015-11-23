@@ -23,7 +23,7 @@ package ru.alexli.pinpong.view
 		
 		public function setPos(val:Number):void
 		{
-			val -= height/2;
+			//val -= height/2;
 			
 			if(val < 0)
 			{
