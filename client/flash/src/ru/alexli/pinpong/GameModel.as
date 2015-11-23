@@ -7,6 +7,12 @@ package ru.alexli.pinpong
 		{
 		}
 		
+		public var playerID:String = String(Math.random());
+			
+		public var gameID:String;
+		
+		public var enemy:Object;
+		
 		public var enemyPosition:Number;
 	}
 }

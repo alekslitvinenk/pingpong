@@ -1,7 +1,9 @@
 package ru.alexli.pinpong.view
 {
 	import flash.display.Graphics;
+	import flash.events.KeyboardEvent;
 	import flash.events.MouseEvent;
+	import flash.ui.Keyboard;
 	
 	import ru.alexli.fcake.utils.log.Logger;
 	import ru.alexli.fcake.view.AbstractVisualObject;
@@ -53,13 +55,34 @@ package ru.alexli.pinpong.view
 		}
 		
 		//events
+		private function onKeyDown(evt:KeyboardEvent):void
+		{
+			if(evt.keyCode == Keyboard.UP)
+			{
+				SocketService.instance.sendMessage({
+					cmd: "moveup",
+					game: app.gmodel.gameID,
+					time: new Date().date
+				});
+			}
+			
+			if(evt.keyCode == Keyboard.DOWN)
+			{
+				SocketService.instance.sendMessage({
+					cmd: "moveup",
+					game: app.gmodel.gameID,
+					time: new Date().date
+				});
+			}
+		}
+		
 		private function onMouseMove(evt:MouseEvent):void
 		{
 			playerLaunchpad.setPos(stage.mouseY);
 			
 			//Logger.debug("Position: ", playerLaunchpad.y);
 			
-			SocketService.instance.sendPosition(playerLaunchpad.y);
+			SocketService.instance.sendMessage(playerLaunchpad.y);
 			
 			evt.updateAfterEvent();
 		}

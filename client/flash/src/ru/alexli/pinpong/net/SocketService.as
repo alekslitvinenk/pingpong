@@ -6,6 +6,7 @@ package ru.alexli.pinpong.net
 	import flash.events.ProgressEvent;
 	import flash.events.SecurityErrorEvent;
 	import flash.net.Socket;
+	import flash.utils.ByteArray;
 	import flash.utils.Endian;
 	
 	import ru.alexli.fcake.utils.log.Logger;
@@ -13,7 +14,21 @@ package ru.alexli.pinpong.net
 
 	public class SocketService
 	{
+		private var app:Game;
+		
 		private var socket:Socket;
+		
+		/**
+		 * Длина пакета данных, полученных от сервера 
+		 */		
+		private var pkgLen:int;
+		
+		private var _dataBuffer:ByteArray = new ByteArray();
+		
+		/**
+		 * Буфер пакета данных 
+		 */		
+		private var dataPackage:ByteArray = new ByteArray();
 		
 		private static var canBeInstantiated:Boolean;
 		
@@ -37,6 +52,8 @@ package ru.alexli.pinpong.net
 			{
 				throw new IllegalOperationError("Error!");
 			}
+			
+			app = Game.instance;
 		}
 		
 		public function connect():void
@@ -50,12 +67,80 @@ package ru.alexli.pinpong.net
 			socket.connect("217.146.78.167", 5000);
 		}
 		
-		public function sendPosition(val:Number):void
+		public function sendMessage(val:Object):void
 		{
 			if(socket && socket.connected)
 			{
-				socket.writeDouble(val);
+				var jsonBa:ByteArray = new ByteArray();
+				jsonBa.writeUTF(JSON.stringify(val));
+				jsonBa.position = 0;
+				
+				var message:ByteArray = new ByteArray();
+				message.writeInt(jsonBa.length);
+				message.writeBytes(jsonBa);
+				message.position = 0;
+				
+				socket.writeBytes(message);
 				socket.flush();
+			}
+		}
+		
+		/**
+		 * Чтение пакета данных из буфера данных 
+		 * 
+		 */		
+		private function readDataPackage():void
+		{
+			var message:Object = JSON.parse(dataPackage.readUTF());
+			
+			switch(message.cmd)
+			{
+				case "onlogin":
+					app.gmodel.playerInfo = message.playerinfo;
+					break;
+				
+				case "gamestarted":
+					app.gmodel.gameID = message.gameid;
+					break;
+			}
+		}
+		
+		/**
+		 * Чтение данных из буфера данных и запись их буфер пакета
+		 * Если длина пакета равна длине буфера данных, то вызывается функция чтения пакета 
+		 * 
+		 */		
+		private function readFromBuffer():void
+		{
+			
+			while(_dataBuffer.bytesAvailable)
+			{
+				//если длина пакета еще не была прочитана, то читаем ее
+				if(pkgLen== 0){
+					//если длина буфера позволяет прочитать длину пакета читаем ее
+					if(_dataBuffer.length >= 4){
+						pkgLen = _dataBuffer.readInt();
+					}else{
+						return;
+					}
+				}
+				
+				//общая длинна данных
+				var dataLen:uint = _dataBuffer.bytesAvailable;
+				
+				//если данных в буфере больше чем длина пакета, считываем из буфера не больше длинны пакета
+				if(dataLen >= pkgLen){
+					var dataToRead:uint = pkgLen;
+					
+					_dataBuffer.readBytes(dataPackage, dataPackage.length, dataToRead);
+					
+					readDataPackage();
+					
+					pkgLen = 0;
+				}else{
+					return;
+				}
+				
 			}
 		}
 		
@@ -65,6 +150,11 @@ package ru.alexli.pinpong.net
 			Logger.debug("SOCKET CONNECTED");
 			
 			socket.endian = Endian.LITTLE_ENDIAN;
+			
+			sendMessage({
+				cmd: "login",
+				player: app.gmodel.playerID
+			});
 		}
 		
 		private function onClose(evt:Event):void
@@ -74,14 +164,10 @@ package ru.alexli.pinpong.net
 		
 		private function onData(evt:ProgressEvent):void
 		{
-			Logger.debug("DATA RECEIVED");
+			Logger.debug("DATA RECEIVED: " + socket.bytesAvailable + " BYTES");
+			socket.readBytes(_dataBuffer, _dataBuffer.length);
 			
-			while(socket.bytesAvailable >= 8)
-			{
-				var enemyPos:Number = socket.readDouble();
-				
-				Game.instance.gmodel.enemyPosition = enemyPos;
-			}
+			readFromBuffer();
 		}
 		
 		private function onError(err:Object):void
